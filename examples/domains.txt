@@ -1,0 +1,11 @@
+# Example hosts. Replace these with domains you own or are authorised to test.
+#
+# Lines starting with '#' and blank lines are ignored. URLs, wildcard
+# prefixes, trailing dots, and host:port forms are normalised automatically.
+
+www.example.com
+blog.example.com
+assets.example.com
+
+# https://preview.example.com/
+# *.dev.example.com
