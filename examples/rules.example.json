@@ -1,0 +1,20 @@
+{
+  "rules": [
+    {
+      "id": "example-cloud",
+      "provider": "Example Cloud",
+      "cname": [
+        "*.example-cloud.net",
+        "*.apps.example-cloud.net"
+      ],
+      "status": [
+        404
+      ],
+      "body": [
+        "this application has not been claimed",
+        "app_not_found"
+      ],
+      "description": "The Example Cloud app referenced by the CNAME does not exist."
+    }
+  ]
+}
