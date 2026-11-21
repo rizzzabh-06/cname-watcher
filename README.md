@@ -94,6 +94,48 @@ Scanned 3 domain(s): 2 candidate(s) (1 dangling, 1 claimable), 1 clean, 0 not fo
 The third host was clean, so it is hidden by default. Use `--all` to display
 every scanned host, including clean and non-existent names.
 
+## Testing it yourself
+
+Install the development extras and run the checks:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+pytest -q
+ruff check src tests
+```
+
+Then run the end-to-end demo. It fakes DNS only: five made-up hostnames are
+pointed at real GitHub Pages, S3, and Vercel endpoints and scanned normally, so
+you do not need a domain of your own. Real HTTP requests are sent to the
+providers; nothing is claimed or modified.
+
+```bash
+python scripts/demo.py
+```
+
+Expected verdicts:
+
+```text
+CLAIMABLE  demo-github.example.com    nonexistent-zzz-abc.github.io                   GitHub Pages  ...
+CLAIMABLE  demo-s3.example.com        nonexistent-zzz-abc.s3.us-east-1.amazonaws.com  Amazon S3     ...
+CLAIMABLE  demo-vercel.example.com    nonexistent-zzz-abc.vercel.app                  Vercel        ...
+CLEAN      demo-live.example.com      rust-lang.github.io                             GitHub Pages  ...
+DANGLING   demo-dangling.example.com  cname-watch-does-not-exist.example              -             ...
+
+Demo passed: all expected verdicts matched.
+```
+
+The demo exits `0` when every expectation matches and `1` otherwise.
+
+Finally, scan hosts you own or are authorised to test:
+
+```bash
+cname-watch -l subdomains.txt --all --verbose
+echo $?  # 1 means at least one candidate was found
+```
+
 ## Verdicts
 
 | Verdict | Candidate? | Meaning |

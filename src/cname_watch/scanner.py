@@ -188,11 +188,21 @@ async def scan_domain(
                     f"(HTTP {match.status_code} at {match.url})"
                 ),
             )
+        if http.error:
+            return ScanResult(
+                domain=domain,
+                verdict=Verdict.ERROR,
+                reason="http-error",
+                resolution=resolution,
+                provider=provider,
+                http=http,
+                detail=f"CNAME target resolves, but HTTP probe failed: {http.error}",
+            )
 
     if provider is None:
         detail = "CNAME target resolves; no fingerprint rule for this target"
-    elif http is not None and http.error:
-        detail = f"CNAME target resolves; HTTP probe failed ({http.error})"
+    elif not options.probe_http:
+        detail = "CNAME target resolves; HTTP fingerprinting disabled"
     else:
         detail = f"CNAME target resolves; no {provider} takeover fingerprint matched"
 
@@ -231,15 +241,13 @@ async def _probe_provider(
             return HttpProbe(attempts=attempts, match=match)
 
     if terminal and terminal != domain and target:
-        # Only use the target as a fallback when the custom hostname does not
-        # appear to be serving a live site. A healthy 2xx/3xx (or a protected
-        # 401/403) response means the domain is already in use.
-        custom_host_is_live = any(
-            attempt.status_code is not None
-            and (200 <= attempt.status_code < 400 or attempt.status_code in (401, 403))
-            for attempt in attempts
-        )
-        if not custom_host_is_live:
+        # Only use the target as a fallback when the custom hostname produced no
+        # HTTP response at all (for example DNS/TLS failures). If the custom
+        # host answered, its response is authoritative: probing the target
+        # directly can mislead for Host-routed services such as S3, where the
+        # bucket is derived from the custom Host header.
+        custom_host_responded = any(attempt.status_code is not None for attempt in attempts)
+        if not custom_host_responded:
             target_schemes = ("https", "http") if options.allow_http else ("https",)
             for scheme in target_schemes:
                 attempt = await fetch(f"{scheme}://{terminal}/", client)
