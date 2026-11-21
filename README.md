@@ -76,8 +76,9 @@ cname-watch -l subdomains.txt --verbose
 ```
 
 Inputs can be bare hostnames, URLs, wildcard prefixes, trailing-dot FQDNs, or
-`host:port` forms. Duplicates and full-line/inline `#` comments are ignored.
-Invalid entries are reported as warnings and skipped.
+`host:port` forms. URL paths and ports are ignored; only the hostname is
+scanned. Duplicates and full-line/inline `#` comments are ignored. Invalid
+entries are reported as warnings and skipped.
 
 ### Example output
 
@@ -101,7 +102,7 @@ every scanned host, including clean and non-existent names.
 | `CLAIMABLE` | yes | The target resolves, but the provider says the resource is unclaimed. |
 | `CLEAN` | no | The CNAME resolves normally, or the input has no CNAME. |
 | `NOT_FOUND` | no | The input itself does not exist or has no addresses (not a dangling CNAME). |
-| `ERROR` | no | DNS or another scan step failed for this host. |
+| `ERROR` | no | DNS, HTTP probing, or another scan step failed for this host. |
 
 ### Reason codes
 
@@ -115,6 +116,7 @@ every scanned host, including clean and non-existent names.
 | `input-nxdomain` | `NOT_FOUND` | The input name itself does not exist. |
 | `input-no-address` | `NOT_FOUND` | The input name has no A/AAAA records and no CNAME. |
 | `dns-error` | `ERROR` | A DNS lookup failed. |
+| `http-error` | `ERROR` | The CNAME target resolves, but all HTTP probes failed. |
 | `internal-error` | `ERROR` | An unexpected error occurred while scanning the host. |
 
 ## How it works
@@ -224,7 +226,8 @@ Run `cname-watch --help` for the full help text.
 
 ## JSON output
 
-`--format json` always includes every scanned host, regardless of `--all`:
+`--format json` always includes every scanned host, regardless of `--all`
+(CSV does the same):
 
 ```json
 {
@@ -291,8 +294,10 @@ This makes the tool usable in CI:
   run: cname-watch -l subdomains.txt --format json -o cname-report.json
 ```
 
-The step fails when a candidate is found. Use `--no-probe` if you want a
-DNS-only check, or append `|| true` if the report is informational.
+The step fails when a candidate is found. Per-host `ERROR` results do not change
+the exit code; they are included in the report so you can inspect them. Use
+`--no-probe` if you want a DNS-only check, or append `|| true` if the report is
+informational.
 
 ## Limitations
 
@@ -311,6 +316,8 @@ DNS-only check, or append `|| true` if the report is informational.
   lack certificates. Use `--verify-tls` when appropriate.
 - **Rate limiting.** High concurrency can trigger provider rate limits. Lower
   `--concurrency` if you see errors or timeouts.
+- **Proxy environment variables are ignored.** HTTP probes connect directly;
+  the DNS check also uses the system or `--nameserver` resolvers.
 
 The fingerprints are inspired by the public
 [can-i-take-over-xyz](https://github.com/EdOverflow/can-i-take-over-xyz)
